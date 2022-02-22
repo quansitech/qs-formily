@@ -74,11 +74,21 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
       restProps.onChange(param.map(file => {
         const doc = parser.parseFromString(file.response, "application/xml");
         const error = doc.querySelector('Error > Message')?.textContent;
-        return {
-          ...file,
-          status: error ? 'error' : file.status,
-          response: error ? {errorMessage: error} : file.response
+        if(error){
+          return {
+            status: error ? 'error' : file.status,
+            response: error ? {errorMessage: error} : file.response
+          }
         }
+        else{
+          return {
+            status: file.status,
+            name: file.name,
+            file_id: file.response.file_id,
+            file_url: file.response.file_url
+          }
+        }
+        
       }));
     }
  }
