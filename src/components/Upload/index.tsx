@@ -86,7 +86,8 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
             status: file.status,
             name: file.name,
             file_id: file.response?.file_id,
-            file_url: file.response?.file_url
+            file_url: file.response?.file_url,
+            url: file.url
           }
         }
         
