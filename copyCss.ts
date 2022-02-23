@@ -15,3 +15,4 @@ glob('./**/*.less', {cwd: path.resolve(__dirname, './src/components')}, (err, fi
 })
 
 fs.copy(`${__dirname}/src/app.less`, `${__dirname}/lib/app.less`);
+fs.copy(`${__dirname}/src/app.less`, `${__dirname}/esm/app.less`);
