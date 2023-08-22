@@ -20,6 +20,7 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
 
   const {
     oss,
+    listType = 'picture-card',
     ...restProps
   } = props;
 
@@ -98,6 +99,7 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
   const formilyProps = {
     ...restProps,
     ...{
+      listType,
       action: ossData.host,
       data: getExtraData,
       beforeUpload,
