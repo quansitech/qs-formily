@@ -1,5 +1,6 @@
 import React from 'react'
 import {UploadProps as FormilyUploadProps, Upload as FormilyUpload} from "@formily/antd"
+import { Modal } from 'antd';
 
 export interface UploadProps extends FormilyUploadProps {
   oss?: boolean //是否oss上传
@@ -17,6 +18,8 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
     oss_meta: ''
   })
   const [fileList, setFileList] = React.useState([]);
+  const [ previewImage, setPreviewImage ] = React.useState('');
+  const [ previewOpen, setPreviewOpen ] = React.useState(false);
 
   const {
     oss,
@@ -96,6 +99,13 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
     }
  }
 
+ const handlePreivew = (file) => {
+    if(file.url){
+      setPreviewImage(file.url);
+      setPreviewOpen(true);
+    }
+ }
+
   const formilyProps = {
     ...restProps,
     ...{
@@ -103,11 +113,23 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
       action: ossData.host,
       data: getExtraData,
       beforeUpload,
-      onChange: handleChange
+      onChange: handleChange,
+      onPreview: handlePreivew
     }
   }
 
-  return <FormilyUpload {...formilyProps} ></FormilyUpload>
+  return <>
+    <FormilyUpload {...formilyProps} ></FormilyUpload>
+    <Modal visible={previewOpen} footer={null} onCancel={() =>  setPreviewOpen(false)}>
+      <img
+        style={{
+          width: '100%',
+          marginTop: '20px'
+        }}
+        src={previewImage}
+      />
+    </Modal>
+  </>
 }
 
 
