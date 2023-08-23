@@ -114,7 +114,12 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
       data: getExtraData,
       beforeUpload,
       onChange: handleChange,
-      onPreview: handlePreivew
+      onPreview: handlePreivew,
+      showUploadList: {
+        showDownloadIcon: true,
+        showRemoveIcon: true,
+        showPreviewIcon: true
+      }
     }
   }
 
