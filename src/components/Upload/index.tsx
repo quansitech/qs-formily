@@ -10,9 +10,7 @@ import init, { calc_file_hash } from '@quansitech/file-md5-wasm';
 export interface UploadProps extends FormilyUploadProps {
   hashCheck?: boolean, //是否校验hash
   uploadTo?: 'cos' | 'oss' | 'tos' | 'server', //上传到哪里
-  listType?: string,
-  action: string,
-  onChange?: (fileList: any[]) => void
+  action: string
 }
 
 export interface StorageProps {
