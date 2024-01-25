@@ -10,7 +10,8 @@ import init, { calc_file_hash } from '@quansitech/file-md5-wasm';
 export interface UploadProps extends FormilyUploadProps {
   hashCheck?: boolean, //是否校验hash
   uploadTo?: 'cos' | 'oss' | 'tos' | 'server', //上传到哪里
-  action: string
+  action: string,
+  wasmUrl?: string,
 }
 
 export interface StorageProps {
@@ -23,16 +24,19 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
   const [ previewImage, setPreviewImage ] = React.useState('');
   const [ previewOpen, setPreviewOpen ] = React.useState(false);
 
-  React.useEffect(() => {
-    init();
-  }, []);
-
   const {
     hashCheck = true,
     uploadTo = 'server',
     listType = 'picture-card',
+    wasmUrl,
     ...restProps
   } = props;
+
+  React.useEffect(() => {
+    init(wasmUrl);
+  }, []);
+
+  
 
   const factoryStorage = (uploadTo: string) => {
     if (uploadTo === 'cos') {

@@ -1,7 +1,7 @@
 {
   "name": "@quansitech/qs-formily",
   "author": "tiderjian",
-  "version": "v2.0.0",
+  "version": "v2.0.1",
   "license": "MIT",
   "main": "lib",
   "module": "esm",
