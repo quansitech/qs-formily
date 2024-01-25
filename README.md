@@ -9,3 +9,8 @@
 + Text  静态文本
 
 + Upload  上传组件，支持 oss | cos | tos | 服务器上传
+
+
+### 升级v2
+think-core v13版本修改了api/upload/upload接口，v2版本是为了兼容v13版本，因此v2不会向后兼容
+
