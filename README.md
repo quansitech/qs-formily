@@ -8,4 +8,4 @@
 
 + Text  静态文本
 
-+ Upload  上传组件，带oss功能
++ Upload  上传组件，支持 oss | cos | tos | 服务器上传

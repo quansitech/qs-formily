@@ -1,74 +1,74 @@
 import React from 'react'
 import {UploadProps as FormilyUploadProps, Upload as FormilyUpload} from "@formily/antd"
 import { Modal } from 'antd';
+import cosStorage from './storage/cos';
+import ossStorage from './storage/oss';
+import serverStorage from './storage/server';
+import tosStorage from './storage/tos';
+import init, { calc_file_hash } from '@quansitech/file-md5-wasm';
 
 export interface UploadProps extends FormilyUploadProps {
-  oss?: boolean //是否oss上传
+  hashCheck?: boolean, //是否校验hash
+  uploadTo?: 'cos' | 'oss' | 'tos' | 'server', //上传到哪里
+  listType?: string,
+  action: string,
+  onChange?: (fileList: any[]) => void
+}
+
+export interface StorageProps {
+  file: File,
+  action: string,
+  hashId?: string
 }
 
 export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: React.PropsWithChildren<UploadProps>) => {
-  const [ossData, setOssData] = React.useState({
-    host: '',
-    dir: '',
-    accessid: '',
-    policy: '',
-    signature: '',
-    callback: '',
-    callback_var: '',
-    oss_meta: ''
-  })
-  const [fileList, setFileList] = React.useState([]);
   const [ previewImage, setPreviewImage ] = React.useState('');
   const [ previewOpen, setPreviewOpen ] = React.useState(false);
 
+  React.useEffect(() => {
+    init();
+  }, []);
+
   const {
-    oss,
+    hashCheck = true,
+    uploadTo = 'server',
     listType = 'picture-card',
     ...restProps
   } = props;
 
-  const getPolicy = async (title) => {
-    return await fetch(`${restProps.action}?title=${encodeURIComponent(title)}`);
-  }
-
-  const getExtraData = file => {
-    const extra = {
-      key: file.key,
-      OSSAccessKeyId: ossData.accessid,
-      policy: ossData.policy,
-      Signature: ossData.signature,
-      success_action_status: 200,
-      callback: ossData.callback
-    };
-
-    const var_obj = JSON.parse(ossData.callback_var);
-    for (let key in var_obj) {
-      extra[key] = var_obj[key];
+  const factoryStorage = (uploadTo: string) => {
+    if (uploadTo === 'cos') {
+      return cosStorage;
     }
-    if (ossData.oss_meta) {
-      const meta_obj = JSON.parse(ossData.oss_meta);
-      for (let meta in meta_obj) {
-        extra[meta] = meta_obj[meta];
-      }
+    if (uploadTo === 'oss') {
+      return ossStorage;
     }
-
-    return extra;
+    if (uploadTo === 'tos') {
+      return tosStorage;
+    }
+    if (uploadTo === 'server') {
+      return serverStorage;
+    }
   };
 
-
-  const beforeUpload = async file => {
-    if(oss){
-      const res = await getPolicy(file.name);
-      const data = await res.json();
-      setOssData(data);
-
-      const suffix = file.name.slice(file.name.lastIndexOf('.'));
-      file.url = data.host + '/' + data.dir + suffix;
-      file.key = data.dir + suffix;
+  const uploadFn = async (file: File) => {
+    const params: StorageProps = {
+        file,
+        action: restProps.action,
+        hashId: ''
+    };
+    if (hashCheck) {
+        params.hashId = await calc_file_hash(file);
     }
 
-    return file;
- }
+    const storage = await factoryStorage(uploadTo);
+
+    const res = await storage.upload(params.file, params.action, params.hashId);
+
+    return res;
+
+  }
+
 
  const handleChange = (param) => {
 
@@ -110,9 +110,11 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
     ...restProps,
     ...{
       listType,
-      action: ossData.host,
-      data: getExtraData,
-      beforeUpload,
+      customRequest: (callbackProps:any) => {
+        uploadFn(callbackProps.file).then((res) => {
+            callbackProps.onSuccess(res);
+        });
+      },
       onChange: handleChange,
       onPreview: handlePreivew,
       showUploadList: {

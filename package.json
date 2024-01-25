@@ -1,7 +1,7 @@
 {
   "name": "@quansitech/qs-formily",
   "author": "tiderjian",
-  "version": "v1.2.3",
+  "version": "v2.0.0",
   "license": "MIT",
   "main": "lib",
   "module": "esm",
@@ -29,7 +29,8 @@
     "@formily/react": "^2.0.2",
     "@formily/shared": "^2.0.2",
     "antd": "^4.0.0",
-    "react": "^17.0.2"
+    "react": "^17.0.2",
+    "@quansitech/file-md5-wasm": "^0.3.1"
   },
   "devDependencies": {
     "@types/node": "^17.0.17",
