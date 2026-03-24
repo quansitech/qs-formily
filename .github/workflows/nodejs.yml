@@ -1,27 +1,67 @@
-# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
-
 name: Node.js CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, v1.0 ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version: 16
           registry-url: 'https://registry.npmjs.org'
-      - run: yarn install
-      - run: yarn run build
-      - uses: JS-DevTools/npm-publish@v1
+
+      - name: Get current version from npm
+        id: current-version
+        run: |
+          CURRENT_VERSION=$(npm view @quansitech/qs-formily version 2>/dev/null || echo "0.0.0")
+          echo "CURRENT_VERSION=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Get new version from package.json
+        id: new-version
+        run: |
+          NEW_VERSION=$(node -p "require('./package.json').version.replace(/^v/, '')")
+          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        id: version-check
+        run: |
+          CURRENT="${{ steps.current-version.outputs.CURRENT_VERSION }}"
+          NEW="${{ steps.new-version.outputs.NEW_VERSION }}"
+          echo "Current npm version: $CURRENT"
+          echo "New version in package.json: $NEW"
+
+          # Compare versions using node
+          SHOULD_PUBLISH=$(node -e "
+            const current = '$CURRENT'.split('.').map(Number);
+            const next = '$NEW'.split('.').map(Number);
+            for (let i = 0; i < 3; i++) {
+              if ((next[i] || 0) > (current[i] || 0)) { console.log('true'); process.exit(0); }
+              if ((next[i] || 0) < (current[i] || 0)) { console.log('false'); process.exit(0); }
+            }
+            console.log('false');
+          ")
+          echo "SHOULD_PUBLISH=$SHOULD_PUBLISH" >> $GITHUB_OUTPUT
+          echo "Should publish: $SHOULD_PUBLISH"
+
+      - name: Install dependencies
+        if: steps.version-check.outputs.SHOULD_PUBLISH == 'true'
+        run: yarn install
+
+      - name: Build
+        if: steps.version-check.outputs.SHOULD_PUBLISH == 'true'
+        run: yarn run build
+
+      - name: Publish to npm
+        if: steps.version-check.outputs.SHOULD_PUBLISH == 'true'
+        uses: JS-DevTools/npm-publish@v3
         with:
-            token: ${{ secrets.NPM_AUTH_TOKEN }}
+          token: ${{ secrets.NPM_AUTH_TOKEN }}
+          access: public
 
       
