@@ -16,49 +16,54 @@ jobs:
           node-version: 16
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Get current version from npm
-        id: current-version
-        run: |
-          CURRENT_VERSION=$(npm view @quansitech/qs-formily version 2>/dev/null || echo "0.0.0")
-          echo "CURRENT_VERSION=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Get new version from package.json
-        id: new-version
+      - name: Get version info
+        id: version-info
         run: |
           NEW_VERSION=$(node -p "require('./package.json').version.replace(/^v/, '')")
           echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Compare versions
-        id: version-check
-        run: |
-          CURRENT="${{ steps.current-version.outputs.CURRENT_VERSION }}"
-          NEW="${{ steps.new-version.outputs.NEW_VERSION }}"
-          echo "Current npm version: $CURRENT"
-          echo "New version in package.json: $NEW"
+          # Find previous version from last commit that changed package.json
+          PREV_VERSION=$(git log -1 --oneline -p -- package.json | node -p "require('fs').readFileSync('/dev/stdin', 'utf8').match(/\"version\":\\s*\"([^\"]+)\"/)?.[1] || '0.0.0'")
+          echo "PREV_VERSION=${PREV_VERSION}" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+          echo "Previous version: $PREV_VERSION"
 
-          # Compare versions using node
-          SHOULD_PUBLISH=$(node -e "
-            const current = '$CURRENT'.split('.').map(Number);
-            const next = '$NEW'.split('.').map(Number);
-            for (let i = 0; i < 3; i++) {
-              if ((next[i] || 0) > (current[i] || 0)) { console.log('true'); process.exit(0); }
-              if ((next[i] || 0) < (current[i] || 0)) { console.log('false'); process.exit(0); }
-            }
-            console.log('false');
-          ")
-          echo "SHOULD_PUBLISH=$SHOULD_PUBLISH" >> $GITHUB_OUTPUT
-          echo "Should publish: $SHOULD_PUBLISH"
+      - name: Check if should publish
+        id: should-publish
+        run: |
+          NEW="${{ steps.version-info.outputs.NEW_VERSION }}"
+          PREV="${{ steps.version-info.outputs.PREV_VERSION }}"
+
+          # Check if version changed
+          if [ "$NEW" == "$PREV" ]; then
+            echo "VERSION_CHANGED=false" >> $GITHUB_OUTPUT
+            echo "No version change, skip publish"
+          else
+            echo "VERSION_CHANGED=true" >> $GITHUB_OUTPUT
+            # Compare versions
+            SHOULD_PUBLISH=$(node -e "
+              const prev = '$PREV'.split('.').map(Number);
+              const next = '$NEW'.split('.').map(Number);
+              for (let i = 0; i < 3; i++) {
+                if ((next[i] || 0) > (prev[i] || 0)) { console.log('true'); process.exit(0); }
+                if ((next[i] || 0) < (prev[i] || 0)) { console.log('false'); process.exit(0); }
+              }
+              console.log('false');
+            ")
+            echo "SHOULD_PUBLISH=$SHOULD_PUBLISH" >> $GITHUB_OUTPUT
+            echo "Version changed, should publish: $SHOULD_PUBLISH"
+          fi
 
       - name: Install dependencies
-        if: steps.version-check.outputs.SHOULD_PUBLISH == 'true'
+        if: steps.should-publish.outputs.SHOULD_PUBLISH == 'true'
         run: yarn install
 
       - name: Build
-        if: steps.version-check.outputs.SHOULD_PUBLISH == 'true'
+        if: steps.should-publish.outputs.SHOULD_PUBLISH == 'true'
         run: yarn run build
 
       - name: Publish to npm
-        if: steps.version-check.outputs.SHOULD_PUBLISH == 'true'
+        if: steps.should-publish.outputs.SHOULD_PUBLISH == 'true'
         uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_AUTH_TOKEN }}
