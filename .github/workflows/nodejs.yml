@@ -22,8 +22,8 @@ jobs:
           NEW_VERSION=$(node -p "require('./package.json').version.replace(/^v/, '')")
           echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
-          # Find previous version from last commit that changed package.json
-          PREV_VERSION=$(git log -1 --oneline -p -- package.json | node -p "require('fs').readFileSync('/dev/stdin', 'utf8').match(/\"version\":\\s*\"([^\"]+)\"/)?.[1] || '0.0.0'")
+          # Find previous version from the commit BEFORE the current one
+          PREV_VERSION=$(git show HEAD~1:package.json 2>/dev/null | node -p "require('./package.json').version.replace(/^v/, '')" || '0.0.0')
           echo "PREV_VERSION=${PREV_VERSION}" >> $GITHUB_OUTPUT
           echo "New version: $NEW_VERSION"
           echo "Previous version: $PREV_VERSION"
