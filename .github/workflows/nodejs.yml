@@ -34,8 +34,9 @@ jobs:
           git tag -l "publish/$BRANCH_NAME-*" || echo "No tags matching publish/$BRANCH_NAME-*"
 
           # Get last published version from git tag for this branch
-          # Use git tag -l with pattern match to find tags like publish/v1.0-1.2.5
-          LAST_TAG=$(git tag -l "publish/$BRANCH_NAME-*" --sort=-v:refname | head -1)
+          # Use git tag -l to get all tags, then find the second highest (previous published version)
+          # Sort descending (-v:refname), skip first (newest), take next (previous)
+          LAST_TAG=$(git tag -l "publish/$BRANCH_NAME-*" --sort=-v:refname | tail -n +2 | head -1 || echo "")
           echo "=== Debug: LAST_TAG=$LAST_TAG ==="
           LAST_PUBLISHED=$(echo "$LAST_TAG" | sed 's/^[^0-9]*-//' || echo "0.0.0")
 
