@@ -73,7 +73,7 @@ jobs:
         run: |
           TAG_NAME="${{ steps.version-info.outputs.TAG_NAME }}"
           NEW_VERSION="${{ steps.version-info.outputs.NEW_VERSION }}"
-          git tag -f "$TAG_NAME" "$NEW_VERSION"
+          git tag -f "$TAG_NAME" HEAD
           git push origin "$TAG_NAME"
 
       
