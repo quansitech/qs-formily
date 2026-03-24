@@ -26,7 +26,15 @@ jobs:
           TAG_NAME="publish/$BRANCH_NAME"
 
           # Get last published version from git tag for this branch
-          LAST_PUBLISHED=$(git describe --tags --abbrev=0 "origin/$BRANCH_NAME" 2>/dev/null | sed 's/^[^-]*-//' || echo "0.0.0")
+          # Use git tag -l with pattern match to find tags like publish/v1.0-1.2.5
+          LAST_TAG=$(git tag -l "publish/$BRANCH_NAME-*" --sort=-v:refname | head -1)
+          LAST_PUBLISHED=$(echo "$LAST_TAG" | sed 's/^[^0-9]*-//' || echo "0.0.0")
+
+          # Validate semver format
+          if ! echo "$LAST_PUBLISHED" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Warning: Invalid semver '$LAST_PUBLISHED' from tag '$LAST_TAG', using 0.0.0"
+            LAST_PUBLISHED="0.0.0"
+          fi
 
           echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_OUTPUT
           echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_OUTPUT
@@ -40,6 +48,13 @@ jobs:
         run: |
           NEW="${{ steps.version-info.outputs.NEW_VERSION }}"
           LAST="${{ steps.version-info.outputs.LAST_PUBLISHED }}"
+
+          # Validate NEW version is semver
+          if ! echo "$NEW" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Error: Invalid semver '$NEW' in package.json"
+            echo "SHOULD_PUBLISH=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
           SHOULD_PUBLISH=$(node -e "
             const last = '$LAST'.split('.').map(Number);
