@@ -38,7 +38,9 @@ jobs:
           # Sort descending (-v:refname), skip first (newest), take next (previous)
           LAST_TAG=$(git tag -l "publish/$BRANCH_NAME-*" --sort=-v:refname | tail -n +2 | head -1 || echo "")
           echo "=== Debug: LAST_TAG=$LAST_TAG ==="
-          LAST_PUBLISHED=$(echo "$LAST_TAG" | sed 's/^[^0-9]*-//' || echo "0.0.0")
+          # Extract version: remove everything before and including the last dash
+          LAST_PUBLISHED="${LAST_TAG##*-}" || echo "0.0.0"
+          [ -z "$LAST_PUBLISHED" ] && LAST_PUBLISHED="0.0.0"
 
           # Validate semver format
           if ! echo "$LAST_PUBLISHED" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
