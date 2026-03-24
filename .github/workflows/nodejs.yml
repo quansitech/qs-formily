@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - uses: actions/setup-node@v3
         with:
@@ -22,39 +22,36 @@ jobs:
         id: version-info
         run: |
           NEW_VERSION=$(node -p "require('./package.json').version.replace(/^v/, '')")
-          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          BRANCH_NAME=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
+          TAG_NAME="publish/$BRANCH_NAME"
 
-          # Find previous version from the commit BEFORE the current one
-          PREV_VERSION=$(git show HEAD~1:package.json 2>/dev/null | node -p "require('./package.json').version.replace(/^v/, '')" || '0.0.0')
-          echo "PREV_VERSION=${PREV_VERSION}" >> $GITHUB_OUTPUT
+          # Get last published version from git tag for this branch
+          LAST_PUBLISHED=$(git describe --tags --abbrev=0 "origin/$BRANCH_NAME" 2>/dev/null | sed 's/^[^-]*-//' || echo "0.0.0")
+
+          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "LAST_PUBLISHED=${LAST_PUBLISHED}" >> $GITHUB_OUTPUT
+          echo "Branch: $BRANCH_NAME"
           echo "New version: $NEW_VERSION"
-          echo "Previous version: $PREV_VERSION"
+          echo "Last published ($TAG_NAME): $LAST_PUBLISHED"
 
       - name: Check if should publish
         id: should-publish
         run: |
           NEW="${{ steps.version-info.outputs.NEW_VERSION }}"
-          PREV="${{ steps.version-info.outputs.PREV_VERSION }}"
+          LAST="${{ steps.version-info.outputs.LAST_PUBLISHED }}"
 
-          # Check if version changed
-          if [ "$NEW" == "$PREV" ]; then
-            echo "VERSION_CHANGED=false" >> $GITHUB_OUTPUT
-            echo "No version change, skip publish"
-          else
-            echo "VERSION_CHANGED=true" >> $GITHUB_OUTPUT
-            # Compare versions
-            SHOULD_PUBLISH=$(node -e "
-              const prev = '$PREV'.split('.').map(Number);
-              const next = '$NEW'.split('.').map(Number);
-              for (let i = 0; i < 3; i++) {
-                if ((next[i] || 0) > (prev[i] || 0)) { console.log('true'); process.exit(0); }
-                if ((next[i] || 0) < (prev[i] || 0)) { console.log('false'); process.exit(0); }
-              }
-              console.log('false');
-            ")
-            echo "SHOULD_PUBLISH=$SHOULD_PUBLISH" >> $GITHUB_OUTPUT
-            echo "Version changed, should publish: $SHOULD_PUBLISH"
-          fi
+          SHOULD_PUBLISH=$(node -e "
+            const last = '$LAST'.split('.').map(Number);
+            const next = '$NEW'.split('.').map(Number);
+            for (let i = 0; i < 3; i++) {
+              if ((next[i] || 0) > (last[i] || 0)) { console.log('true'); process.exit(0); }
+              if ((next[i] || 0) < (last[i] || 0)) { console.log('false'); process.exit(0); }
+            }
+            console.log('false');
+          ")
+          echo "SHOULD_PUBLISH=$SHOULD_PUBLISH" >> $GITHUB_OUTPUT
+          echo "New ($NEW) > Last ($LAST)? $SHOULD_PUBLISH"
 
       - name: Install dependencies
         if: steps.should-publish.outputs.SHOULD_PUBLISH == 'true'
@@ -70,5 +67,13 @@ jobs:
         with:
           token: ${{ secrets.NPM_AUTH_TOKEN }}
           access: public
+
+      - name: Update git tag
+        if: steps.should-publish.outputs.SHOULD_PUBLISH == 'true'
+        run: |
+          TAG_NAME="${{ steps.version-info.outputs.TAG_NAME }}"
+          NEW_VERSION="${{ steps.version-info.outputs.NEW_VERSION }}"
+          git tag -f "$TAG_NAME" "$NEW_VERSION"
+          git push origin "$TAG_NAME"
 
       
