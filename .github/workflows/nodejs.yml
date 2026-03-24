@@ -25,9 +25,18 @@ jobs:
           BRANCH_NAME=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
           TAG_NAME="publish/$BRANCH_NAME"
 
+          # Debug: Show all available tags
+          echo "=== Debug: All tags ==="
+          git tag -l "publish/*" || echo "No publish/* tags found"
+
+          # Debug: Show tags matching current branch
+          echo "=== Debug: Tags for branch $BRANCH_NAME ==="
+          git tag -l "publish/$BRANCH_NAME-*" || echo "No tags matching publish/$BRANCH_NAME-*"
+
           # Get last published version from git tag for this branch
           # Use git tag -l with pattern match to find tags like publish/v1.0-1.2.5
           LAST_TAG=$(git tag -l "publish/$BRANCH_NAME-*" --sort=-v:refname | head -1)
+          echo "=== Debug: LAST_TAG=$LAST_TAG ==="
           LAST_PUBLISHED=$(echo "$LAST_TAG" | sed 's/^[^0-9]*-//' || echo "0.0.0")
 
           # Validate semver format
