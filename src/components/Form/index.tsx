@@ -7,7 +7,7 @@ export interface FormProps extends FomilyFormProps {
   formLayout?: FormLayoutType
 }
 
-const mapProps = {
+const mapProps: Record<FormLayoutType, FomilyFormProps> = {
   vertical: {
     layout: 'vertical',
     labelCol: 24,
