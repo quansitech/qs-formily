@@ -3,6 +3,9 @@ import { Button, Modal, Upload as AntdUpload } from 'antd'
 import type { UploadFile, UploadProps as AntdUploadProps } from 'antd/lib/upload/interface';
 import { useField } from '@formily/react'
 
+//antd的Button类型依赖@types/react，本项目未安装时JSX无法推断，这里统一转成组件类型使用
+const UploadTrigger = Button as unknown as React.ComponentType<{ children?: React.ReactNode }>;
+
 const HEIC_MIME_TYPES = [
   'image/heic',
   'image/heif',
@@ -374,7 +377,7 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
       return getPolicy(file)?.host || '';
     }
 
-    return typeof action === 'function' ? action(file) : (action || '');
+    return typeof action === 'function' ? (action(file) as string) : (action || '');
   };
 
   const resolveData = (file: any) => {
@@ -468,7 +471,7 @@ export const Upload: React.FC<React.PropsWithChildren<UploadProps>> = (props: Re
     >
       {children || (listType === 'picture-card'
         ? <span style={{ fontSize: 20, lineHeight: 1 }}>+</span>
-        : <Button>{textContent}</Button>)}
+        : <UploadTrigger>{textContent}</UploadTrigger>)}
     </AntdUpload>
     <Modal visible={previewOpen} footer={null} onCancel={() => setPreviewOpen(false)}>
       <img
